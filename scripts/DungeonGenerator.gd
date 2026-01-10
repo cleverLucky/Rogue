@@ -89,7 +89,7 @@ func create_tilemap():
 	var tileset = TileSet.new()
 	tilemap.tile_set = tileset
 	
-	# 地板（绿色）
+	# 地板 source 0
 	var floor_source = TileSetAtlasSource.new()
 	var floor_texture = create_colored_texture(Color(0.2, 0.6, 0.2))
 	floor_source.texture = floor_texture
@@ -97,13 +97,16 @@ func create_tilemap():
 	floor_source.create_tile(Vector2i(0, 0))
 	tileset.add_source(floor_source, 0)
 	
-	# 墙（灰色）
+	# 墙 source 1（先不加碰撞）
 	var wall_source = TileSetAtlasSource.new()
 	var wall_texture = create_colored_texture(Color(0.4, 0.4, 0.4))
 	wall_source.texture = wall_texture
 	wall_source.texture_region_size = Vector2i(tile_size, tile_size)
 	wall_source.create_tile(Vector2i(0, 0))
 	tileset.add_source(wall_source, 1)
+	
+	# 暂时不加任何碰撞代码
+
 
 # 绘制整个地牢
 func draw_dungeon():
@@ -144,12 +147,37 @@ func find_random_floor_position() -> Vector2:
 
 # 生成玩家（使用预制场景）
 func create_player():
-	var player_scene = load("res://scenes/player.tscn")
+	var path = "res://scenes/player.tscn"  # ← 先确认这个路径是否正确
+	
+	var player_scene = load(path)
 	if player_scene == null:
-		printerr("错误：找不到 res://scenes/player.tscn")
-		return
+		printerr("【严重错误】找不到玩家场景！")
+		printerr("尝试加载的路径: " + path)
+		printerr("请检查以下内容：")
+		printerr("1. 文件是否存在？")
+		printerr("2. 文件名大小写是否正确？（Godot 区分大小写）")
+		printerr("3. 是否在 scenes 文件夹下？")
+		
+		# 自动打印 scenes 文件夹里所有文件，帮助你排查
+		var dir = DirAccess.open("res://scenes")
+		if dir:
+			printerr("当前 res://scenes 文件夹内容：")
+			dir.list_dir_begin()
+			var file_name = dir.get_next()
+			while file_name != "":
+				if !dir.current_is_dir():
+					printerr("  - " + file_name)
+					file_name = dir.get_next()
+				else:
+					printerr("无法打开 res://scenes 文件夹！")
+		
+		return  # 直接返回，避免后续崩溃
 	
 	var player = player_scene.instantiate()
+	if player == null:
+		printerr("玩家场景加载成功，但 instantiate() 失败！可能是场景内部配置错误")
+		return
+	
 	player.global_position = find_random_floor_position()
 	add_child(player)
 	print("✅ 玩家已创建！位置:", player.global_position)
