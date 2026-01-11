@@ -7,7 +7,14 @@ class_name DungeonGenerator
 @export var tile_size: int = 16
 
 var grid: Array = []         # 2D网格：0=墙，1=地板
-var tilemap: TileMap
+var tilemap: TileMapLayer
+
+
+@export var tileset_path: String = "res://assets/dungeon_tileset.tres"
+const GRASS_SOURCE_ID := 0
+const GRASS_ATLAS     := Vector2i(0, 5)
+const DUNGEON_SOURCE_ID := 1
+const FLOOR_ATLAS := Vector2i(0, 5)
 
 func _ready():
 	generate_dungeon()
@@ -82,47 +89,36 @@ func dig_tunnel(start: Vector2i, end: Vector2i):
 
 # 创建TileMap和图集
 func create_tilemap():
-	tilemap = TileMap.new()
-	tilemap.name = "TileMap"
+	tilemap = TileMapLayer.new()
+	tilemap.name = "TileMapLayer"   # 建議改名，避免跟舊 TileMap 混淆
 	add_child(tilemap)
+
+	var tileset = load(tileset_path) as TileSet
 	
-	var tileset = TileSet.new()
+	if tileset == null:
+		push_error("無法載入 TileSet！請檢查路徑：" + tileset_path)
+		push_error("1. 檔案是否存在？")
+		push_error("2. 是否真的是 TileSet 資源？")
+		push_error("3. 路徑大小寫是否正確？")
+		return
+	
 	tilemap.tile_set = tileset
-	
-	# 地板 source 0
-	var floor_source = TileSetAtlasSource.new()
-	var floor_texture = create_colored_texture(Color(0.2, 0.6, 0.2))
-	floor_source.texture = floor_texture
-	floor_source.texture_region_size = Vector2i(tile_size, tile_size)
-	floor_source.create_tile(Vector2i(0, 0))
-	tileset.add_source(floor_source, 0)
-	
-	# 墙 source 1（先不加碰撞）
-	var wall_source = TileSetAtlasSource.new()
-	var wall_texture = create_colored_texture(Color(0.4, 0.4, 0.4))
-	wall_source.texture = wall_texture
-	wall_source.texture_region_size = Vector2i(tile_size, tile_size)
-	wall_source.create_tile(Vector2i(0, 0))
-	tileset.add_source(wall_source, 1)
-	
-	# 暂时不加任何碰撞代码
+	print("成功載入 TileSet:", tileset_path)
+	print("圖集來源數量:", tileset.get_source_count())
 
 
-# 绘制整个地牢
 func draw_dungeon():
 	for y in range(map_height):
 		for x in range(map_width):
 			var pos = Vector2i(x, y)
-			if grid[y][x] == 1:
-				tilemap.set_cell(0, pos, 0, Vector2i(0, 0))   # 地板
+			
+			if grid[y][x] == 0:
+				# 地板
+				tilemap.set_cell(pos, DUNGEON_SOURCE_ID, FLOOR_ATLAS)
 			else:
-				tilemap.set_cell(0, pos, 1, Vector2i(0, 0))   # 墙
+				# 牆壁（或外圍草地）
+				tilemap.set_cell(pos, GRASS_SOURCE_ID, GRASS_ATLAS)  # 墙
 
-# 创建纯色纹理
-func create_colored_texture(color: Color) -> ImageTexture:
-	var img = Image.create(tile_size, tile_size, false, Image.FORMAT_RGBA8)
-	img.fill(color)
-	return ImageTexture.create_from_image(img)
 
 # 居中相机
 func center_camera():
