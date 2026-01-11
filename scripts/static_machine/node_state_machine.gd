@@ -10,6 +10,7 @@ var parent_node_name: String
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	print("state machine ready")
 	parent_node_name = get_parent().name
 	for child in get_children():
 		if child is NodeState:
@@ -29,7 +30,7 @@ func _physics_process(delta: float) -> void:
 	if current_node_state:
 		current_node_state._on_physics_process(delta)
 		current_node_state._on_next_transitions()
-		print(parent_node_name, " Current State: ", current_node_state_name)
+		#print(parent_node_name, " Current State: ", current_node_state_name)
 	
 func transition_to(node_state_name : String) -> void:
 	if node_state_name == current_node_state.name.to_lower():

@@ -166,6 +166,7 @@ radius = 6.0
 height = 16.0
 
 [node name="testPlayer" type="CharacterBody2D"]
+collision_layer = 2
 script = ExtResource("1_48w40")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
@@ -178,11 +179,16 @@ frame_progress = 0.77114546
 position = Vector2(0, -1)
 shape = SubResource("CapsuleShape2D_e7mys")
 
-[node name="StateMachine" type="Node" parent="."]
+[node name="StateMachine" type="Node" parent="." node_paths=PackedStringArray("initial_node_state")]
 script = ExtResource("3_gqg63")
+initial_node_state = NodePath("Idle")
 
-[node name="Idle" type="Node" parent="StateMachine"]
+[node name="Idle" type="Node" parent="StateMachine" node_paths=PackedStringArray("player", "animated_sprite_2d")]
 script = ExtResource("4_hfou0")
+player = NodePath("../..")
+animated_sprite_2d = NodePath("../../AnimatedSprite2D")
 
-[node name="Walk" type="Node" parent="StateMachine"]
+[node name="Walk" type="Node" parent="StateMachine" node_paths=PackedStringArray("player", "animated_sprite_2d")]
 script = ExtResource("5_oxvr6")
+player = NodePath("../..")
+animated_sprite_2d = NodePath("../../AnimatedSprite2D")
