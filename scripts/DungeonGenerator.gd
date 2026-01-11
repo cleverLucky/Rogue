@@ -7,7 +7,7 @@ class_name DungeonGenerator
 @export var tile_size: int = 16
 
 var grid: Array = []         # 2D网格：0=墙，1=地板
-var tilemap: TileMapLayer
+@export var tilemap: TileMapLayer
 
 
 @export var tileset_path: String = "res://assets/dungeon_tileset.tres"
@@ -143,7 +143,7 @@ func find_random_floor_position() -> Vector2:
 
 # 生成玩家（使用预制场景）
 func create_player():
-	var path = "res://scenes/player.tscn"  # ← 先确认这个路径是否正确
+	var path = "res://scenes/test_player.tscn"  # ← 先确认这个路径是否正确
 	
 	var player_scene = load(path)
 	if player_scene == null:
