@@ -4,3 +4,7 @@
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
+map_width = null
+map_height = null
+tile_size = null
+tileset_path = null

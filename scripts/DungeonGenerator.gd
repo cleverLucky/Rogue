@@ -6,6 +6,8 @@ class_name DungeonGenerator
 @export var map_height: int = 60
 @export var tile_size: int = 16
 
+var dungeon_core: DungeonCore
+
 var grid: Array = []         # 2D网格：0=墙，1=地板
 @export var tilemap: TileMapLayer
 
@@ -22,21 +24,32 @@ func _ready():
 func generate_dungeon():
 	print("🚀 开始生成地牢...")
 	
-	# 1. 初始化全墙网格
-	grid = []
-	for y in range(map_height):
-		var row = []
-		for x in range(map_width):
-			row.append(0)  # 0=墙
-		grid.append(row)
+	# # 1. 初始化全墙网格
+	# grid = []
+	# for y in range(map_height):
+	# 	var row = []
+	# 	for x in range(map_width):
+	# 		row.append(0)  # 0=墙
+	# 	grid.append(row)
 	
-	# 2. 生成5个随机房间
-	for i in range(5):
-		create_random_room()
+	# # 2. 生成5个随机房间
+	# for i in range(5):
+	# 	create_random_room()
 	
-	# 3. 连接房间
-	connect_rooms()
+	# # 3. 连接房间
+	# connect_rooms()
 	
+	# 1. 创建核心生成器实例
+	dungeon_core = DungeonCore.new()
+	
+	# 可选：在这里修改 DungeonCore 的参数（如果需要覆盖默认值）
+	# dungeon_core.num_rooms = 30
+	# dungeon_core.corridor_width = 4
+	# dungeon_core.extra_edge_ratio = 0.2
+	# dungeon_core.separation_force = 0.8
+	
+	# 2. 使用 DungeonCore 生成网格
+	grid = dungeon_core.generate_grid(map_width, map_height)
 	# 4. 创建并绘制 TileMap
 	create_tilemap()
 	draw_dungeon()
