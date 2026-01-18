@@ -6,6 +6,9 @@ class_name DungeonGenerator
 @export var map_height: int = 60
 @export var tile_size: int = 16
 
+@export var enemy_scene: PackedScene
+@export var navigation_region: NavigationRegion2D
+
 var dungeon_core: DungeonCore
 
 var grid: Array = []         # 2D网格：0=墙，1=地板
@@ -23,21 +26,6 @@ func _ready():
 
 func generate_dungeon():
 	print("🚀 开始生成地牢...")
-	
-	# # 1. 初始化全墙网格
-	# grid = []
-	# for y in range(map_height):
-	# 	var row = []
-	# 	for x in range(map_width):
-	# 		row.append(0)  # 0=墙
-	# 	grid.append(row)
-	
-	# # 2. 生成5个随机房间
-	# for i in range(5):
-	# 	create_random_room()
-	
-	# # 3. 连接房间
-	# connect_rooms()
 	
 	# 1. 创建核心生成器实例
 	dungeon_core = DungeonCore.new()
@@ -57,9 +45,29 @@ func generate_dungeon():
 	# 5. 居中相机
 	center_camera()
 	
+	# 敌人生成部分（替换成这样，保持其他不变）
+	var spawner = get_node_or_null("EnemySpawner")
+	if spawner == null:
+		spawner = Node.new()
+		spawner.name = "EnemySpawner"
+		spawner.set_script(load("res://scripts/EnemySpawner.gd"))
+		add_child(spawner)
+
+	# 初始化参数
+	# spawner.initialize(grid, tile_size, map_width, map_height)
+	spawner.initialize(grid, tile_size, map_width, map_height, dungeon_core.rooms)
+
+	# 关键修复：强制加载敌人场景（防止编辑器没设置）
+	spawner.enemy_scene = load("res://scenes/enemy.tscn")
+
+	# 执行生成
+	spawner.spawn_enemies()
+
 	# 6. 生成玩家（重要！放在这里）
 	create_player()
 	
+	setup_navigation()
+
 	print("🎉 地牢生成完成！")
 
 # 创建单个随机房间
@@ -109,7 +117,7 @@ func create_tilemap():
 	var tileset = load(tileset_path) as TileSet
 	
 	if tileset == null:
-		push_error("無法載入 TileSet！請檢查路徑：" + tileset_path)
+		push_error("无法载入 TileSet！请检查路径：" + tileset_path)
 		push_error("1. 檔案是否存在？")
 		push_error("2. 是否真的是 TileSet 資源？")
 		push_error("3. 路徑大小寫是否正確？")
@@ -190,3 +198,41 @@ func create_player():
 	player.global_position = find_random_floor_position()
 	add_child(player)
 	print("✅ 玩家已创建！位置:", player.global_position)
+
+
+func setup_navigation():
+	# 确保 NavigationRegion2D 存在
+	if navigation_region == null:
+		navigation_region = NavigationRegion2D.new()
+		navigation_region.name = "NavigationRegion2D"
+		add_child(navigation_region)
+	
+	# 创建 NavigationPolygon
+	var nav_polygon = NavigationPolygon.new()
+	navigation_region.navigation_polygon = nav_polygon
+	
+	# 创建源几何数据
+	var nav_source = NavigationMeshSourceGeometryData2D.new()
+	
+	# 添加所有地板作为可行走轮廓（高效方式：只加外轮廓 + 合并）
+	# 这里用简单矩形轮廓方式（每个地板 tile 一个矩形）
+	for y in range(map_height):
+		for x in range(map_width):
+			if grid[y][x] == 1:  # 地板
+				var outline = PackedVector2Array([
+					Vector2(x * tile_size,     y * tile_size),
+					Vector2((x+1) * tile_size, y * tile_size),
+					Vector2((x+1) * tile_size, (y+1) * tile_size),
+					Vector2(x * tile_size,     (y+1) * tile_size),
+					Vector2(x * tile_size,     y * tile_size)  # 闭合轮廓
+				])
+				nav_source.add_traversable_outline(outline)
+	
+	# 重要：使用 NavigationServer2D 烘焙
+	NavigationServer2D.bake_from_source_geometry_data(nav_polygon, nav_source, func(): 
+		print("🧭 NavigationPolygon 烘焙完成！怪物可智能移动")
+	)
+	
+	# 可选：设置烘焙参数（在 NavigationRegion2D Inspector 里也可以调）
+	nav_polygon.agent_radius = 8.0  # 怪物半径
+	nav_polygon.cell_size = 4.0     # 网格精度

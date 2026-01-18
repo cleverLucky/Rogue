@@ -1,10 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://main"]
+[gd_scene load_steps=3 format=3 uid="uid://main"]
 
 [ext_resource type="Script" uid="uid://dug6dok1ljdjq" path="res://scripts/DungeonGenerator.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://5ocosu0ofecu" path="res://scenes/enemy.tscn" id="2_0wfyh"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
-map_width = null
-map_height = null
-tile_size = null
-tileset_path = null
+enemy_scene = ExtResource("2_0wfyh")
