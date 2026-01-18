@@ -81,3 +81,4 @@ frame_progress = 0.9125681
 path_desired_distance = 4.0
 target_desired_distance = 4.0
 path_max_distance = 50.0
+avoidance_enabled = true

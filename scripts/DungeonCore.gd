@@ -292,3 +292,6 @@ func dig_tunnel_simple(start: Vector2i, end: Vector2i):
 func set_grid_tile(x: int, y: int):
 	if x >= 0 and x < map_width and y >= 0 and y < map_height:
 		grid[y][x] = 1
+
+func get_rooms() -> Array[Dictionary]:
+	return rooms

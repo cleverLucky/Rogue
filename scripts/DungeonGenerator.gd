@@ -55,7 +55,7 @@ func generate_dungeon():
 
 	# 初始化参数
 	# spawner.initialize(grid, tile_size, map_width, map_height)
-	spawner.initialize(grid, tile_size, map_width, map_height, dungeon_core.rooms)
+	spawner.initialize(grid, tile_size, map_width, map_height, dungeon_core.get_rooms())
 
 	# 关键修复：强制加载敌人场景（防止编辑器没设置）
 	spawner.enemy_scene = load("res://scenes/enemy.tscn")
