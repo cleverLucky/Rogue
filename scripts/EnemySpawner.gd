@@ -36,6 +36,9 @@ func spawn_enemies(custom_count: int = -1) -> void:
 	# 根据分配数量，在每个房间生成对应怪物数
 	for room_idx in rooms.size():
 		var room = rooms[room_idx]
+		if room.get('is_starting_room', false):
+			print("跳过起始安全室，不生成怪物")
+			continue  # 跳过这个房间
 		var to_spawn = allocations[room_idx]
 		
 		if to_spawn <= 0:

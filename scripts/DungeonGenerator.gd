@@ -152,16 +152,27 @@ func center_camera():
 	camera.position = map_center
 	camera.zoom = Vector2(0.8, 0.8)
 
-# 随机找一个地板位置（玩家出生点）
+# 修改 find_random_floor_position()，优先用起始房间中心
 func find_random_floor_position() -> Vector2:
-	for i in range(100):
+	# 先检查是否有起始房间（id=-1）
+	for room in dungeon_core.rooms:
+		if room.get('is_starting_room', false):
+			var center_x = room.center.x * tile_size + tile_size / 2.0
+			var center_y = room.center.y * tile_size + tile_size / 2.0
+			print("玩家优先出生在起始安全室中心")
+			return Vector2(center_x, center_y)
+	
+	# 找不到就用随机地板（fallback）
+	for i in range(200):
 		var x = randi_range(1, map_width - 2)
 		var y = randi_range(1, map_height - 2)
 		if grid[y][x] == 1:
 			return Vector2(x * tile_size + tile_size / 2.0, y * tile_size + tile_size / 2.0)
-	# 找不到就返回中心
+	
+	# 极端情况：返回地图中心
 	return Vector2(map_width * tile_size / 2.0, map_height * tile_size / 2.0)
 
+	
 # 生成玩家（使用预制场景）
 func create_player():
 	var path = "res://scenes/test_player.tscn"  # ← 先确认这个路径是否正确

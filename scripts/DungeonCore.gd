@@ -30,6 +30,8 @@ func generate_grid(width: int, height: int) -> Array:
 			row.append(0)  # 0=墙
 		grid.append(row)
 	
+	generate_starting_room()
+	
 	# 2. 生成并分离房间
 	generate_and_separate_rooms()
 	
@@ -295,3 +297,35 @@ func set_grid_tile(x: int, y: int):
 
 func get_rooms() -> Array[Dictionary]:
 	return rooms
+
+# 生成固定起始安全室（最下面，水平居中）
+func generate_starting_room():
+	# 固定大小（可调）
+	var start_w = 12  # 宽度（格子数）
+	var start_h = 10   # 高度（格子数）
+	
+	# 位置：最底部，水平居中，向上留2格墙
+	var start_x = (map_width - start_w) / 2.0  # 水平居中
+	var start_y = map_height - start_h - 2     # 最下面，留2格墙边距
+	
+	var start_rect = Rect2(start_x, start_y, start_w, start_h)
+	var start_room = {
+		'id': -1,  # 特殊 ID
+		'rect': start_rect,
+		'center': start_rect.position + start_rect.size * 0.5,
+		'area': start_w * start_h,
+		'is_starting_room': true  # 标记：不生成怪物
+	}
+	
+	# 插入到 rooms 列表首位（方便后续过滤）
+	rooms.insert(0, start_room)
+	
+	# 立即雕刻到 grid（确保先生成）
+	var rect_i = Rect2i(start_rect.position.round(), start_rect.size.round())
+	for x in range(rect_i.position.x, rect_i.position.x + rect_i.size.x):
+		for y in range(rect_i.position.y, rect_i.position.y + rect_i.size.y):
+			if x >= 0 and x < map_width and y >= 0 and y < map_height:
+				grid[y][x] = 1
+	
+	print("安全起始房间生成：最底部中央，位置(", start_x, ",", start_y, "), 大小(", start_w, "x", start_h, ")")
+	print("安全屋 rooms 数据: id=", start_room.id, ", is_starting_room=", start_room.is_starting_room)
