@@ -153,25 +153,47 @@ func center_camera():
 	camera.zoom = Vector2(0.8, 0.8)
 
 # 修改 find_random_floor_position()，优先用起始房间中心
+# 修改：强制优先起始安全屋中心出生（带调试 + 安全检查）
 func find_random_floor_position() -> Vector2:
-	# 先检查是否有起始房间（id=-1）
-	for room in dungeon_core.rooms:
-		if room.get('is_starting_room', false):
-			var center_x = room.center.x * tile_size + tile_size / 2.0
-			var center_y = room.center.y * tile_size + tile_size / 2.0
-			print("玩家优先出生在起始安全室中心")
-			return Vector2(center_x, center_y)
+	print("调试：开始查找出生点，rooms 数量 = ", dungeon_core.rooms.size())
 	
-	# 找不到就用随机地板（fallback）
+	# 遍历所有房间，找起始安全屋
+	for room in dungeon_core.rooms:
+		# 打印每个房间的键，帮助排查
+		print("房间 ID: ", room.get('id', '无ID'), " | is_starting_room: ", room.get('is_starting_room', '未设置'))
+		
+		# 匹配条件：有 is_starting_room=true 或 id=-1
+		if room.get('is_starting_room', false) or room.get('id', 0) == -1:
+			# 安全检查 center 是否存在
+			if 'center' in room and room.center is Vector2:
+				var center_grid_x = room.center.x
+				var center_grid_y = room.center.y
+				
+				var center_pixel_x = center_grid_x * tile_size + tile_size / 2.0
+				var center_pixel_y = center_grid_y * tile_size + tile_size / 2.0
+				
+				print("✅ 找到起始安全屋！格子中心: (", center_grid_x, ", ", center_grid_y, ")")
+				print("   像素位置: (", center_pixel_x, ", ", center_pixel_y, ")")
+				
+				return Vector2(center_pixel_x, center_pixel_y)
+			else:
+				printerr("警告：起始房间缺少 center 数据！跳过")
+	
+	printerr("⚠️ 未找到任何标记为起始房间的房间，使用随机地板出生")
+	
+	# 随机地板 fallback
 	for i in range(200):
 		var x = randi_range(1, map_width - 2)
 		var y = randi_range(1, map_height - 2)
 		if grid[y][x] == 1:
-			return Vector2(x * tile_size + tile_size / 2.0, y * tile_size + tile_size / 2.0)
+			var pos = Vector2(x * tile_size + tile_size / 2.0, y * tile_size + tile_size / 2.0)
+			print("随机出生点: ", pos)
+			return pos
 	
-	# 极端情况：返回地图中心
-	return Vector2(map_width * tile_size / 2.0, map_height * tile_size / 2.0)
-
+	# 最终 fallback：地图中心
+	var center = Vector2(map_width * tile_size / 2.0, map_height * tile_size / 2.0)
+	print("极端情况：返回地图中心 ", center)
+	return center
 	
 # 生成玩家（使用预制场景）
 func create_player():

@@ -30,10 +30,9 @@ func generate_grid(width: int, height: int) -> Array:
 			row.append(0)  # 0=墙
 		grid.append(row)
 	
-	generate_starting_room()
-	
-	# 2. 生成并分离房间
 	generate_and_separate_rooms()
+	
+	generate_starting_room()
 	
 	# 3. 雕刻所有房间到网格
 	carve_all_rooms()
