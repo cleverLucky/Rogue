@@ -30,9 +30,11 @@ func generate_grid(width: int, height: int) -> Array:
 			row.append(0)  # 0=墙
 		grid.append(row)
 	
-	generate_and_separate_rooms()
-	
+	# generate_and_separate_rooms()
+
 	generate_starting_room()
+	generate_and_separate_rooms()
+
 	
 	# 3. 雕刻所有房间到网格
 	carve_all_rooms()
@@ -55,26 +57,54 @@ func generate_grid(width: int, height: int) -> Array:
 
 # 生成初始房间（圆内均匀分布）
 func generate_and_separate_rooms():
-	rooms.clear()
-	var map_center = Vector2(map_width / 2.0, map_height / 2.0)
-	var radius = min(map_width, map_height) * 0.4
-	
+	# 注意：此时 rooms 里已经有安全屋（id=-1）了
+
+	# 读取安全屋的实际位置（更可靠，不硬编码）
+	var safe_room = rooms[0]  # 因为 insert(0, ...)
+	var safe_top_y    = safe_room.rect.position.y          # 安全屋顶部 y（较小值）
+	var safe_bottom_y = safe_room.rect.end.y               # 安全屋底部 y（较大值）
+
+	# 普通房间允许的 y 范围：地图顶部 → 安全屋顶部上方留空隙
+	var buffer = 10.0  # 安全屋上方留 10 格缓冲，避免贴太近
+	var min_y_for_rooms = 5.0                          # 顶部留墙
+	var max_y_for_rooms = safe_top_y - buffer          # 最高到安全屋顶部 - buffer
+
+	# 防止区域太小（极端小地图情况下）
+	if max_y_for_rooms - min_y_for_rooms < 30:
+		max_y_for_rooms = map_height * 0.45
+		print("警告：安全屋上方空间不足，使用地图上半部作为限制")
+
+	var map_center_x = map_width / 2.0
+
 	for i in range(num_rooms):
-		var room_size_x = randi_range(6, 15)
-		var room_size_y = randi_range(4, 10)
-		var offset = random_point_in_circle(radius)
-		var center = map_center + offset
-		var rect = Rect2(center - Vector2(room_size_x / 2.0, room_size_y / 2.0), Vector2(room_size_x, room_size_y))
+		var room_w = randi_range(6, 15)
+		var room_h = randi_range(4, 12)
+		
+		# x：全宽随机，但稍向中间靠拢
+		var center_x = map_center_x + randf_range(-map_width * 0.42, map_width * 0.42)
+		
+		# y：强制在上方区域，且考虑房间自身高度不越界
+		var half_h = room_h / 2.0
+		var center_y = randf_range(
+			min_y_for_rooms + half_h,
+			max_y_for_rooms - half_h
+		)
+		
+		var center = Vector2(center_x, center_y)
+		var rect = Rect2(
+			center - Vector2(room_w / 2.0, room_h / 2.0),
+			Vector2(room_w, room_h)
+		)
 		
 		var room = {
-			'id': i,
+			'id': i + 100,   # 随便给个正数就好，区分开即可
 			'rect': rect,
 			'center': center,
-			'area': room_size_x * room_size_y
+			'area': room_w * room_h
 		}
 		rooms.append(room)
-	
-	# 分离房间（物理模拟）
+
+	# 开始分离（包含安全屋）
 	separate_rooms()
 
 # 圆内均匀随机点
@@ -93,41 +123,63 @@ func separate_rooms():
 		
 		for i in range(rooms.size()):
 			for j in range(i + 1, rooms.size()):
-				if rooms[i].rect.intersects(rooms[j].rect):
-					var dx = rooms[j].center.x - rooms[i].center.x
-					var dy = rooms[j].center.y - rooms[i].center.y
-					var dist = sqrt(dx * dx + dy * dy)
-					if dist < 0.001:
-						dist = 0.001
-						dx = randf_range(-1, 1)
-						dy = randf_range(-1, 1)
+				var roomA = rooms[i]
+				var roomB = rooms[j]
+				
+				if roomA.rect.intersects(roomB.rect):
+					# 判断哪个是安全屋
+					var safe = null
+					var other = null
+					if roomA.has("is_starting_room") and roomA.is_starting_room:
+						safe = roomA
+						other = roomB
+					elif roomB.has("is_starting_room") and roomB.is_starting_room:
+						safe = roomB
+						other = roomA
 					
-					var force_mag = separation_force * (1.0 / dist)
-					dx = dx / dist * force_mag
-					dy = dy / dist * force_mag
+					var dx = roomB.center.x - roomA.center.x
+					var dy = roomB.center.y - roomA.center.y
+					var dist = max(0.001, sqrt(dx*dx + dy*dy))
 					
-					rooms[i].center.x -= dx
-					rooms[i].center.y -= dy
-					rooms[j].center.x += dx
-					rooms[j].center.y += dy
+					var force_mag = separation_force * 1.5   # 对安全屋加大推力
 					
-					rooms[i].rect.position = rooms[i].center - rooms[i].rect.size * 0.5
-					rooms[j].rect.position = rooms[j].center - rooms[j].rect.size * 0.5
+					dx /= dist
+					dy /= dist
+					
+					if safe != null:
+						# 只推 other，不动安全屋
+						other.center.x += dx * force_mag * 1.5
+						other.center.y += dy * force_mag * 1.5
+						other.rect.position = other.center - other.rect.size * 0.5
+					else:
+						# 普通房间互推
+						roomA.center.x -= dx * force_mag
+						roomA.center.y -= dy * force_mag
+						roomB.center.x += dx * force_mag
+						roomB.center.y += dy * force_mag
+						roomA.rect.position = roomA.center - roomA.rect.size * 0.5
+						roomB.rect.position = roomB.center - roomB.rect.size * 0.5
 					
 					moved = true
 	
-	# 网格对齐并 Clamp 到边界
+	# 在 separate_rooms() 最后的 clamp 循环中
 	for room in rooms:
+		if room.has("is_starting_room") and room.is_starting_room:
+			# 安全屋位置不允许动
+			continue
+		
 		room.rect.position.x = round(room.rect.position.x)
 		room.rect.position.y = round(room.rect.position.y)
 		room.center.x = room.rect.position.x + room.rect.size.x * 0.5
 		room.center.y = room.rect.position.y + room.rect.size.y * 0.5
 		
-		# Clamp
-		room.rect.position.x = max(1.0, min(room.rect.position.x, map_width - room.rect.size.x - 1.0))
-		room.rect.position.y = max(1.0, min(room.rect.position.y, map_height - room.rect.size.y - 1.0))
+		# clamp（普通房间）
+		room.rect.position.x = max(1.0, min(room.rect.position.x, map_width - room.rect.size.x - 1))
+		room.rect.position.y = max(1.0, min(room.rect.position.y, map_height - room.rect.size.y - 1))
+		
 		room.center.x = room.rect.position.x + room.rect.size.x * 0.5
 		room.center.y = room.rect.position.y + room.rect.size.y * 0.5
+
 
 # 雕刻所有房间
 func carve_all_rooms():
